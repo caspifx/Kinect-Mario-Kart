@@ -1,0 +1,8 @@
+requirements:
+openCV
+numpy
+pyautogui
+
+to start run motion detection, Best used aginst blank background with no people.
+Project is Based On SuperTuxKart, must have installed.
+v - 1.0 beta
