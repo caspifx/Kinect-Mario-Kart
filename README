@@ -1,8 +1,13 @@
-requirements:
-openCV
+Project made for OSH Hanoca Hackhathon 2019, By Raz Sapir, Roy Nosrati, Illay Shaham and Ziv Caspi.
+
+Kinect SuperTuxKart is a free add-on to SuperTuxKart enabling the player to control his veaichle with his body.
+
+Our project requires no expensive equipment, only a computer with python and a working webcam.
+
+module requirements --
+opencv
 numpy
 pyautogui
 
-to start run motion detection, Best used aginst blank background with no people.
-Project is Based On SuperTuxKart, must have installed.
-v - 1.0 beta
+to play- enter how many players you would like and start a local game. than start the script, make sure the game window is selected and wait for the car to start moving.
+Play! Have Fun!
