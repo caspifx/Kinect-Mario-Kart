@@ -4,10 +4,12 @@ import render_image
 import pyautogui
 import threading
 import time
+import Player
 
 sdThresh = 20
 font = cv2.FONT_HERSHEY_SIMPLEX
-
+controls = [['Up', 'Left','Right'], ['w', 'a', 'd']]
+number_of_players = 2
 
 def distMap(frame1, frame2):
     """outputs pythagorean distance between two frames"""
@@ -19,114 +21,99 @@ def distMap(frame1, frame2):
     return dist
 
 
-def always_forward():
-    def press_gas(rate):
-        while True:
-            pyautogui.keyDown('Up')
-            time.sleep(rate)
-            pyautogui.keyUp('Up')
-    print('Controlling Game In 3 Seconds...')
-    time.sleep(3)
-    thread = threading.Thread(target=press_gas, args=(0.5,))
-    thread.start()
+def capture_frame(cap):
+    _, frame = cap.read()
+    return render_image.slice(frame, number_of_players)
 
 
-def turn_right():
-    def press_right(rate):
-        pyautogui.keyDown('Right')
-        time.sleep(rate)
-        pyautogui.keyUp('Right')
+def player_initial_frames(frame1, frame2, player):
 
-    thread = threading.Thread(target=press_right, args=(0.2,))
-    thread.start()
+    frame1s = render_image.slice(frame1, 3)
 
+    frame2s = render_image.slice(frame2, 3)
 
-def turn_left():
-    def press_left(rate):
-        pyautogui.keyDown('Left')
-        time.sleep(rate)
-        pyautogui.keyUp('Left')
-
-    thread = threading.Thread(target=press_left, args=(0.2,))
-    thread.start()
-
-
-def stay():
-    # pyautogui.keyUp('Right')
-    # pyautogui.keyUp('Left')
-    pass
+    player.initial_frames = [(frame1s), (frame2s)]
 
 
 
-def handle_movement(states):
-    right = states['right']
-    left = states['left']
-    center = states['center']
-    if right and not left:
-        turn_right()
-    if left and not right:
-        turn_left()
-    if center and not left and not right:
-        stay()
+def main():
+    cv2.namedWindow('frame')
+    cap = cv2.VideoCapture(0)
 
-cv2.namedWindow('frame')
+    frame1 = capture_frame(cap)
+    frame2 = capture_frame(cap)
+
+    players = []
+    for i in range(number_of_players):
+        players.append(Player.Player(1, controls[i][0], controls[i][1], controls[i][2], 'r', 0.5))
+    # capture video stream from camera source. 0 refers to first camera, 1 referes to 2nd and so on.
+    i = 0
+    for player in players:
+        player_initial_frames(frame1[i], frame2[i], player)
+        player.always_forward()
+        i += 1
 
 
-#capture video stream from camera source. 0 refers to first camera, 1 referes to 2nd and so on.
-cap = cv2.VideoCapture(0)
-ret, frame1 = cap.read()
-frame1s = render_image.slice(frame1, 3)
-ret2, frame2 = cap.read()
-initial_frames = [(frame1s), (render_image.slice(frame2, 3))]
-facecount = 0
+    # maintains fixed forward speed
 
-always_forward()
 
-while(True):
-    _, frame3 = cap.read()
-    frames = render_image.slice(frame3, 3)
-    frame_index = 0
-    states = {'right': False, 'center': False, 'left': False}
-    for frame in frames:
-        frame1 = initial_frames[0][frame_index]
-        frame2 = initial_frames[1][frame_index]
-        rows, cols, _ = np.shape(frame)
-        dist = distMap(frame1, frame)
+    while True:
+        _, frame3_all = cap.read()
+        frame3s = render_image.slice(frame3_all, number_of_players)
+        i = 0
+        for player in players:
+            frame3 = frame3s[i]
+            i += 1
+            frames = render_image.slice(frame3, 3)
+            frame_index = 0
+            # states = {'right': False, 'center': False, 'left': False}
+            for frame in frames:
+                frame1 = player.initial_frames[0][frame_index]
+                frame2 = player.initial_frames[1][frame_index]
+                rows, cols, _ = np.shape(frame)
+                dist = distMap(frame1, frame)
 
-        frame1 = frame2
-        frame2 = frame
+                frame1 = frame2
+                frame2 = frame
 
-        # apply Gaussian smoothing
-        mod = cv2.GaussianBlur(dist, (9,9), 0)
+                # apply Gaussian smoothing
+                mod = cv2.GaussianBlur(dist, (9, 9), 0)
 
-        # apply thresholding
-        _, thresh = cv2.threshold(mod, 100, 255, 0)
+                # apply thresholding
+                _, thresh = cv2.threshold(mod, 100, 255, 0)
 
-        # calculate st dev test
-        _, stDev = cv2.meanStdDev(mod)
+                # calculate st dev test
+                _, stDev = cv2.meanStdDev(mod)
 
-        cv2.putText(frame2, 'SPLIT', (70, 70), font, 1.5, (255, 255, 255), 1, cv2.LINE_AA)
-        if stDev > sdThresh:
-            cv2.putText(frame2, 'SPLIT', (70, 70), font, 1.5, (100, 0, 0), 1, cv2.LINE_AA)
-            if frame_index == 0:
-                states['right'] = True
-            if frame_index == 1:
-                states['center'] = True
-            if frame_index == 2:
-                states['left'] = True
-                #TODO: Face Detection 2
-        handle_movement(states)
-        if cv2.waitKey(1) & 0xFF == 27:
-            break
-        frame_index += 1
-    # cv2.imshow('dist', frame3)
-    #     # dist = distMap(frame1, frame3)
-    #     # mod = cv2.GaussianBlur(dist, (9, 9), 0)
-    #     # cv2.imshow('dist', mod)
-    height, width = frame3.shape[:2]
-    cv2.line(frame3, (int(width / 3), 0), (int(width / 3), height), (0, 0, 0), 1)
-    cv2.line(frame3, (int(width / 3) * 2, 0), (int(width / 3) * 2, height), (0, 0, 0), 1)
-    cv2.imshow('frame', frame3)
+                cv2.putText(frame2, 'SPLIT', (70, 70), font, 1.5, (255, 255, 255), 1, cv2.LINE_AA)
+                if stDev > sdThresh:
+                    cv2.putText(frame2, 'SPLIT', (70, 70), font, 1.5, (0, 0, 100), 1, cv2.LINE_AA)
+                    if frame_index == 0:
+                        player.states['right'] = True
+                    if frame_index == 1:
+                        player.states['center'] = True
+                    if frame_index == 2:
+                        player.states['left'] = True
+                        # TODO: Face Detection 2
+                player.handle_movement()
+                if cv2.waitKey(1) & 0xFF == 27:
+                    break
+                frame_index += 1
+            # cv2.imshow('dist', frame3)
+            #     # dist = distMap(frame1, frame3)
+            #     # mod = cv2.GaussianBlur(dist, (9, 9), 0)
+            #     # cv2.imshow('dist', mod)
+        height, width = frame3_all.shape[:2]
+        width /= number_of_players
+        for i in range(number_of_players):
+            cv2.line(frame3_all, (int(width / 3)+ int(i*width), 0), (int(width / 3) + int(width*i), height), (0, 0, 0), 1)
+            cv2.line(frame3_all, (int(width / 3)*2+ int(i*width), 0), (int(width / 3)*2+ int(i*width), height), (0, 0, 0), 1)
+        if number_of_players > 1:
+            cv2.line(frame3_all, (int(width), 0), (int(width), height), (0, 0, 255), 3)
+        cv2.imshow('frame', frame3_all)
 
-cap.release()
-cv2.destroyAllWindows()
+    cap.release()
+    cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    main()
