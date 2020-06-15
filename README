@@ -1,6 +1,7 @@
+# Kinect SuperTuxKart
 Project made for OSH Hanoca Hackhathon 2019, By Raz Sapir, Roy Nosrati, Illay Shaham and Ziv Caspi.
 
-Kinect SuperTuxKart is a free add-on to SuperTuxKart enabling the player to control his veaichle with his body.
+Kinect SuperTuxKart is a free add-on to SuperTuxKart enabling the player to control his vehicle with his body.
 
 Our project requires no expensive equipment, only a computer with python and a working webcam.
 
